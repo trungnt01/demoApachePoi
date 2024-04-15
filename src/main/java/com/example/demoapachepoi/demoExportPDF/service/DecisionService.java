@@ -11,8 +11,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class DecisionService {
@@ -35,7 +36,12 @@ public class DecisionService {
 
             replaceText(doc, "${DangUyRQD}", "Đảng bộ tập đoàn Viettel");
             replaceText(doc, "${DangBoCapTren}", "Đảng bộ tập đoàn FPT");
+            replaceText(doc, "${TenCBMoi}", "Chi bộ GPS");
+            replaceText(doc, "${DangCapTrenTrucTiep}", "Đảng bộ tập đoàn NB");
+            replaceText(doc, "${NhiemKy}", "2020-2022");
+            replaceText(doc, "${CoQuanSoanThao}", "FPT");
             replaceText(doc, "${partyMemberList", jsonString);
+            returnText(doc);
 
             // Save the modified document
             FileOutputStream out = new FileOutputStream("D:\\Projects\\GPS\\CTCT\\projects\\demo-apache-poi\\src\\main\\resources\\templates\\output.docx");
@@ -48,6 +54,76 @@ public class DecisionService {
             System.out.println("Report generated successfully!");
             doc.close();
         }
+    }
+
+    public Map<String, Object> returnText(XWPFDocument document){
+        Map<String, Object> map = new HashMap<>();
+        XWPFRun run, nextRun;
+        StringBuilder text = null;
+        for (XWPFParagraph paragraph: document.getParagraphs()) {
+            List<XWPFRun> runs = paragraph.getRuns();
+            if (runs != null) {
+                for (int i = 0; i < runs.size(); i++) {
+                    run = runs.get(i);
+                    if(text != null && !checkSymmetric(text.toString())){
+                        text.append("\n").append(run.getText(0));
+                    } else {
+                        text = new StringBuilder(run.getText(0));
+                    }
+
+                    if (text == null) {
+                        continue;
+                    }
+                    if (checkVariable(text.toString()) || text.toString().contains("$")) {
+                        while (i < runs.size() - 1) {
+                            nextRun = runs.get(i + 1);
+                            text.append(nextRun.getText(0));
+                            paragraph.removeRun(i + 1);
+                            if(text.toString().contains("{") && checkSymmetric(text.toString())){
+                                break;
+                            }
+                        }
+                        if(!checkSymmetric(text.toString())){
+//                            paragraph.removeRun(0);
+                            continue;
+                        }
+
+                        map.put(getKey(text.toString()), getValue(text.toString()));
+                        run.setText(getValue(text.toString()), 0);
+                    }
+                }
+            }
+        }
+
+        for (XWPFTable tbl : document.getTables()) {
+            for (XWPFTableRow row : tbl.getRows()) {
+                for (XWPFTableCell cell : row.getTableCells()) {
+                    for (XWPFParagraph p : cell.getParagraphs()) {
+                        List<XWPFRun> runs = p.getRuns();
+                        if (runs != null) {
+                            for (int i = 0; i < runs.size(); i++) {
+                                run = runs.get(i);
+                                text = new StringBuilder(run.getText(0));
+                                if (text == null) {
+                                    continue;
+                                }
+                                if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
+                                    while (!text.toString().contains("}")) {
+                                        nextRun = runs.get(i + 1);
+                                        text.append(nextRun.getText(0));
+                                        p.removeRun(i + 1);
+                                    }
+                                    map.put(getKey(text.toString()), getValue(text.toString()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        return map;
     }
 
     private void replaceText(XWPFDocument document, String key, String value) {
@@ -69,9 +145,9 @@ public class DecisionService {
                             paragraph.removeRun(i + 1);
                         }
 
-                        if(text.toString().contains(key)){
-                            value = replaceList(text.toString(), value);
-                        }
+//                        if(text.toString().contains(key)){
+//                            value = replaceList(text.toString(), value);
+//                        }
 
                         //nếu thấy \n thì xuống dòng
                         if(value.contains("\n")){
@@ -242,6 +318,35 @@ public class DecisionService {
         int start = key.indexOf("${", 2);
         int finish = key.lastIndexOf("}");
         return key.substring(start, finish);
+    }
+
+    public boolean checkVariable(String text){
+        String regex = "\\$[^{]*\\{";
+        Pattern pattern = Pattern.compile(regex);
+        boolean b = pattern.matcher(text).find();
+        return b;
+    }
+
+    public String getKey(String text){
+        String regex = "\\$([^\\{]*)\\{";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            String key = matcher.group(1);
+            return key;
+        }
+        return null;
+    }
+
+    public String getValue(String text){
+        String regex = "\\{([^}]*)\\}";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            String value = matcher.group(1);
+            return value;
+        }
+        return null;
     }
 
 }
