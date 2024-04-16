@@ -18,8 +18,6 @@ import java.util.regex.Pattern;
 @Service
 public class DecisionService {
 
-    private String partyMemberList = "${partyMemberList ${STT}. Đồng chí ${QuanHam} ${HoTen} - ${ChucVuChinhQuyen} - ${ChucVuCapUy}}";
-
     String jsonString = "[" +
                 "[{\"key\":\"HoTen\",\"value\":\"Nguyễn Thành Trung\",\"access\":\"read_only\"},{\"key\":\"QuanHam\",\"value\":\"Đại tá\",\"access\":\"read_only\"},{\"key\":\"ChucVuChinhQuyen\",\"value\":\"Chủ tịch\",\"access\":\"read_only\"},{\"key\":\"ChucVuCapUy\",\"value\":\"Bí thư\",\"access\":\"read_only\"},{\"key\":\"tuoi\",\"value\":\"32\",\"access\":\"read_only\"},{\"key\":\"diaChi\",\"value\":\"Hà Nội\",\"access\":\"read_only\"}], " +
                 "[{\"key\":\"HoTen\",\"value\":\"Tran Ngoc Anh\",\"access\":\"read_only\"},{\"key\":\"QuanHam\",\"value\":\"Đại úy\",\"access\":\"read_only\"},{\"key\":\"ChucVuChinhQuyen\",\"value\":\"Chủ tịch\",\"access\":\"read_only\"},{\"key\":\"ChucVuCapUy\",\"value\":\"Bí thư\",\"access\":\"read_only\"},{\"key\":\"tuoi\",\"value\":\"32\",\"access\":\"read_only\"},{\"key\":\"diaChi\",\"value\":\"Hà Nội\",\"access\":\"read_only\"}], " +
@@ -28,6 +26,8 @@ public class DecisionService {
                 "[{\"key\":\"HoTen\",\"value\":\"Lê Văn Giang\",\"access\":\"read_only\"},{\"key\":\"QuanHam\",\"value\":\"Trung úy\",\"access\":\"read_only\"},{\"key\":\"ChucVuChinhQuyen\",\"value\":\"Chủ tịch\",\"access\":\"read_only\"},{\"key\":\"ChucVuCapUy\",\"value\":\"Bí thư\",\"access\":\"read_only\"},{\"key\":\"tuoi\",\"value\":\"32\",\"access\":\"read_only\"},{\"key\":\"diaChi\",\"value\":\"Hà Nội\",\"access\":\"read_only\"}], " +
                 "[{\"key\":\"HoTen\",\"value\":\"Nguyễn Tiến Tùng\",\"access\":\"read_only\"},{\"key\":\"QuanHam\",\"value\":\"Đại tá\",\"access\":\"read_only\"},{\"key\":\"ChucVuChinhQuyen\",\"value\":\"Chủ tịch\",\"access\":\"read_only\"},{\"key\":\"ChucVuCapUy\",\"value\":\"Bí thư\",\"access\":\"read_only\"},{\"key\":\"tuoi\",\"value\":\"32\",\"access\":\"read_only\"},{\"key\":\"diaChi\",\"value\":\"Hà Nội\",\"access\":\"read_only\"}]" +
             "]";
+
+    Map<String, Object> mapData = new HashMap<>();
 
     @SneakyThrows
     public void export() {
@@ -40,8 +40,16 @@ public class DecisionService {
             replaceText(doc, "${DangCapTrenTrucTiep}", "Đảng bộ tập đoàn NB");
             replaceText(doc, "${NhiemKy}", "2020-2022");
             replaceText(doc, "${CoQuanSoanThao}", "FPT");
+            replaceText(doc, "${CacDieuTren}", "1,2,3"); //todo: thêm stt các điều vào đây
+            replaceText(doc, "${SapNhap}", "trên cơ sở sáp nhập Chi bộ Team A và Chi bộ Team B");
+            replaceText(doc, "${SoLuongDangVien}", "6");
+            replaceText(doc, "${ChiUyMoi}", "Chi ủy GPS");
+            replaceText(doc, "${DieuCuoiCung}", "4");
+            replaceText(doc, "${ChuCaiDauTien}", "T");
+            replaceText(doc, "${SoLuongBanPhatHanh}", "7");
+            replaceText(doc, "${DiaDanh}", "Hà Nội");
             replaceText(doc, "${partyMemberList", jsonString);
-            returnText(doc);
+//            returnText(doc);
 
             // Save the modified document
             FileOutputStream out = new FileOutputStream("D:\\Projects\\GPS\\CTCT\\projects\\demo-apache-poi\\src\\main\\resources\\templates\\output.docx");
@@ -57,10 +65,11 @@ public class DecisionService {
     }
 
     public Map<String, Object> returnText(XWPFDocument document){
-        Map<String, Object> map = new HashMap<>();
+
         XWPFRun run, nextRun;
         StringBuilder text = null;
-        for (XWPFParagraph paragraph: document.getParagraphs()) {
+        for (int a = 0; a < document.getParagraphs().size(); a++) {
+            XWPFParagraph paragraph = document.getParagraphs().get(a);
             List<XWPFRun> runs = paragraph.getRuns();
             if (runs != null) {
                 for (int i = 0; i < runs.size(); i++) {
@@ -84,12 +93,13 @@ public class DecisionService {
                             }
                         }
                         if(!checkSymmetric(text.toString())){
-//                            paragraph.removeRun(0);
+//                            run.setText("", 0);
+//                            document.getParagraphs().remove(a);
                             continue;
                         }
 
-                        map.put(getKey(text.toString()), getValue(text.toString()));
-                        run.setText(getValue(text.toString()), 0);
+                        mapData.put(getKey(text.toString()), getValue(text.toString()));
+//                        run.setText(getValue(text.toString()), 0);
                     }
                 }
             }
@@ -98,8 +108,95 @@ public class DecisionService {
         for (XWPFTable tbl : document.getTables()) {
             for (XWPFTableRow row : tbl.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
-                    for (XWPFParagraph p : cell.getParagraphs()) {
-                        List<XWPFRun> runs = p.getRuns();
+                    for (XWPFParagraph paragraph : cell.getParagraphs()) {
+                        List<XWPFRun> runs = paragraph.getRuns();
+                        if (runs != null) {
+                            for (int i = 0; i < runs.size(); i++) {
+                                run = runs.get(i);
+                                if(text != null && !checkSymmetric(text.toString())){
+                                    text.append("\n").append(run.getText(0));
+                                } else {
+                                    text = new StringBuilder(run.getText(0));
+                                }
+
+                                if (text == null) {
+                                    continue;
+                                }
+                                if (checkVariable(text.toString()) || text.toString().contains("$")) {
+                                    while (i < runs.size() - 1) {
+                                        nextRun = runs.get(i + 1);
+                                        text.append(nextRun.getText(0));
+                                        paragraph.removeRun(i + 1);
+                                        if(text.toString().contains("{") && checkSymmetric(text.toString())){
+                                            break;
+                                        }
+                                    }
+                                    if(!checkSymmetric(text.toString())){
+//                                        run.setText("", 0);
+                                        continue;
+                                    }
+
+                                    mapData.put(getKey(text.toString()), getValue(text.toString()));
+//                                    run.setText(getValue(text.toString()), 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return mapData;
+    }
+
+    public void replaceTextFromDataCustom(XWPFDocument document){
+        XWPFRun run, nextRun;
+        StringBuilder text;
+        for (XWPFParagraph paragraph: document.getParagraphs()) {
+            List<XWPFRun> runs = paragraph.getRuns();
+            if (runs != null) {
+                for (int i = 0; i < runs.size(); i++) {
+                    run = runs.get(i);
+                    text = new StringBuilder(run.getText(0));
+                    if (text == null) {
+                        continue;
+                    }
+                    if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
+                        while (!text.toString().contains("}") || !checkSymmetric(text.toString())) {
+                            nextRun = runs.get(i + 1);
+                            text.append(nextRun.getText(0));
+                            paragraph.removeRun(i + 1);
+                        }
+
+                        String key = getKey(text.toString());
+                        String value = mapData.get(key).toString();
+
+                        //nếu thấy \n thì xuống dòng
+                        if(value.contains("\n")){
+                            String [] dataList = value.split("\n");
+                            if(text.toString().contains(key)){
+                                for (String data : dataList) {
+                                    run.setText("", 0);
+                                    XWPFRun newRun = paragraph.createRun();
+                                    newRun.setText(data, 0);
+                                    newRun.setFontSize(run.getFontSize());
+                                    newRun.addCarriageReturn();
+                                }
+                            }
+                        } else {
+                            run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (XWPFTable tbl : document.getTables()) {
+            for (XWPFTableRow row : tbl.getRows()) {
+//                forTable(row.getTable(), key, value);
+                for (XWPFTableCell cell : row.getTableCells()) {
+//                    forTables(cell.getTables(), key, value);
+                    for (XWPFParagraph paragraph : cell.getParagraphs()) {
+                        List<XWPFRun> runs = paragraph.getRuns();
                         if (runs != null) {
                             for (int i = 0; i < runs.size(); i++) {
                                 run = runs.get(i);
@@ -108,12 +205,31 @@ public class DecisionService {
                                     continue;
                                 }
                                 if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
-                                    while (!text.toString().contains("}")) {
+                                    while (!text.toString().contains("}") || !checkSymmetric(text.toString())) {
                                         nextRun = runs.get(i + 1);
                                         text.append(nextRun.getText(0));
-                                        p.removeRun(i + 1);
+                                        paragraph.removeRun(i + 1);
                                     }
-                                    map.put(getKey(text.toString()), getValue(text.toString()));
+
+//                                    if(text.toString().contains(key) && (key.contains("List") || key.contains("list"))){
+//                                        value = replaceList(text.toString(), value);
+//                                    }
+//
+//                                    //nếu thấy \n thì xuống dòng
+//                                    if(value.contains("\n")){
+//                                        String [] dataList = value.split("\n");
+//                                        if(text.toString().contains(key)){
+//                                            for (String data : dataList) {
+//                                                run.setText("", 0);
+//                                                XWPFRun newRun = paragraph.createRun();
+//                                                newRun.setText(data, 0);
+//                                                newRun.setFontSize(run.getFontSize());
+//                                                newRun.addCarriageReturn();
+//                                            }
+//                                        }
+//                                    } else {
+//                                        run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
+//                                    }
                                 }
                             }
                         }
@@ -121,9 +237,6 @@ public class DecisionService {
                 }
             }
         }
-
-
-        return map;
     }
 
     private void replaceText(XWPFDocument document, String key, String value) {
@@ -139,15 +252,15 @@ public class DecisionService {
                         continue;
                     }
                     if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
-                        while (!text.toString().contains("}") && !checkSymmetric(text.toString())) {
+                        while (!text.toString().contains("}") || !checkSymmetric(text.toString())) {
                             nextRun = runs.get(i + 1);
                             text.append(nextRun.getText(0));
                             paragraph.removeRun(i + 1);
                         }
 
-//                        if(text.toString().contains(key)){
-//                            value = replaceList(text.toString(), value);
-//                        }
+                        if(text.toString().contains(key) && (key.contains("List") || key.contains("list"))){
+                            value = replaceList(text.toString(), value);
+                        }
 
                         //nếu thấy \n thì xuống dòng
                         if(value.contains("\n")){
@@ -175,11 +288,11 @@ public class DecisionService {
 
         for (XWPFTable tbl : document.getTables()) {
             for (XWPFTableRow row : tbl.getRows()) {
-                forTable(row.getTable(), key, value);
+//                forTable(row.getTable(), key, value);
                 for (XWPFTableCell cell : row.getTableCells()) {
-                    forTables(cell.getTables(), key, value);
-                    for (XWPFParagraph p : cell.getParagraphs()) {
-                        List<XWPFRun> runs = p.getRuns();
+//                    forTables(cell.getTables(), key, value);
+                    for (XWPFParagraph paragraph : cell.getParagraphs()) {
+                        List<XWPFRun> runs = paragraph.getRuns();
                         if (runs != null) {
                             for (int i = 0; i < runs.size(); i++) {
                                 run = runs.get(i);
@@ -188,12 +301,35 @@ public class DecisionService {
                                     continue;
                                 }
                                 if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
-                                    while (!text.toString().contains("}")) {
+                                    while (!text.toString().contains("}") || !checkSymmetric(text.toString())) {
                                         nextRun = runs.get(i + 1);
                                         text.append(nextRun.getText(0));
-                                        p.removeRun(i + 1);
+                                        paragraph.removeRun(i + 1);
                                     }
-                                    run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
+
+                                    if(text.toString().contains(key) && (key.contains("List") || key.contains("list"))){
+                                        value = replaceList(text.toString(), value);
+                                    }
+
+                                    //nếu thấy \n thì xuống dòng
+                                    if(value.contains("\n")){
+                                        String [] dataList = value.split("\n");
+                                        if(text.toString().contains(key)){
+                                            for (String data : dataList) {
+                                                run.setText("", 0);
+                                                XWPFRun newRun = paragraph.createRun();
+                                                newRun.setText(data, 0);
+                                                newRun.setFontSize(run.getFontSize());
+//                                    newRun.addBreak();
+
+//                                    paragraphNew.setIndentationLeft(0);
+//                                    paragraphNew.setIndentationFirstLine(0);
+                                                newRun.addCarriageReturn();
+                                            }
+                                        }
+                                    } else {
+                                        run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
+                                    }
                                 }
                             }
                         }
@@ -280,13 +416,13 @@ public class DecisionService {
                 for(MyObject myObject : myObjects.get(j)){
                     if(lst[i].contains("${")){
                         if(lst[i].contains("STT")){
-                            lst[i] = String.valueOf(j + 1).concat(". ");
+                            lst[i] = String.valueOf(j + 1).concat(".");
                             break;
                         }
                         if(lst[i].contains(myObject.getKey())){
                             lst[i] = myObject.getValue();
                             if (lst[i].contains(".")){
-                                lst[i] += ". ";
+                                lst[i] += ".";
                             }
                             break;
                         }
