@@ -1,7 +1,7 @@
 package com.example.demoapachepoi.demoExportPDF.controller;
 
 import com.example.demoapachepoi.demoExportPDF.service.DecisionService;
-import com.example.demoapachepoi.demoExportPDF.service.ExportEntityService;
+import com.example.demoapachepoi.demoExportPDF.service.ExportDecisionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,12 +17,21 @@ public class ExportController {
     private DecisionService decisionService;
 
     @Autowired
-    private ExportEntityService exportEntityService;
+    private ExportDecisionService exportEntityService;
 
     @GetMapping()
     public ResponseEntity exportData(){
-        decisionService.export();
-        return ResponseEntity.ok(null);
+        return ResponseEntity.ok(decisionService.exportText());
+    }
+
+    @GetMapping("/export-style")
+    public ResponseEntity exportStyle(){
+        return ResponseEntity.ok(decisionService.exportStyle());
+    }
+
+    @GetMapping("/export-decision")
+    public ResponseEntity exportDecision(){
+        return ResponseEntity.ok(exportEntityService.exportStyle());
     }
 
 }

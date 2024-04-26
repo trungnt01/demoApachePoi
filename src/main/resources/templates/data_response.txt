@@ -1,0 +1,191 @@
+{
+    "dangUyRQD": {
+        "ĐẢNG ỦY TẬP ĐOÀN VIETTEL": {
+            "styleParagraph": "align:center,",
+            "ĐẢNG ỦY TẬP ĐOÀN VIETTEL": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "dcsvn": {
+        "ĐẢNG CỘNG SẢN VIỆT NAM": {
+            "styleParagraph": "align:center,",
+            "ĐẢNG CỘNG SẢN VIỆT NAM": "bold:true,italic:false,color:null,fontSize:15,underline:true"
+        }
+    },
+    "dangBoCapTren": {
+        "ĐẢNG BỘ TẬP ĐOÀN VIETTEL": {
+            "styleParagraph": "align:center,",
+            "ĐẢNG BỘ TẬP ĐOÀN VIETTEL": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "dauSao": {
+        "*": {
+            "styleParagraph": "align:center,",
+            "*": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "so": {
+        "Số:        -QĐ/ĐU": {
+            "styleParagraph": "align:center,",
+            "Số:        -QĐ/ĐU": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "dd": {
+        "Hà Nội, ngày    tháng     năm    ": {
+            "styleParagraph": "align:center,",
+            "Hà Nội, ngày    tháng     năm    ": "bold:false,italic:true,color:null,fontSize:14,underline:false"
+        }
+    },
+    "qd": {
+        "QUYẾT ĐỊNH": {
+            "styleParagraph": "align:center,",
+            "QUYẾT ĐỊNH": "bold:true,italic:false,color:null,fontSize:15,underline:false"
+        }
+    },
+    "veViec": {
+        "Về việc thành lập Chi bộ GPS trực thuộc Đảng bộ tập đoàn NB nhiệm kỳ 2020-2022": {
+            "styleParagraph": "align:center,",
+            "Về việc thành lập Chi bộ GPS trực thuộc Đảng bộ tập đoàn NB nhiệm kỳ 2020-2022": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "dauGach": {
+        "-----": {
+            "styleParagraph": "align:center,",
+            "-----": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "canCu": {
+        "Căn cứ Điều lệ Đảng Cộng sản Việt Nam;": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "Căn cứ Điều lệ Đảng Cộng sản Việt Nam;": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        },
+        "Căn cứ Quy định số 24-QĐ/TW ngày 30 tháng 7 năm 2021 của Ban Chấp hành Trung ương về thi hành Điều lệ Đảng;": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "Căn cứ Quy định số 24-QĐ/TW ngày 30 tháng 7 năm 2021 của Ban Chấp hành Trung ương về thi hành Điều lệ Đảng;": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        },
+        "Căn cứ Quy định số 49-QĐ/TW ngày 22 tháng 12 năm 2021 của Bộ Chính trị về tổ chức đảng trong Quân đội nhân dân Việt Nam;": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "Căn cứ Quy định số 49-QĐ/TW ngày 22 tháng 12 năm 2021 của Bộ Chính trị về tổ chức đảng trong Quân đội nhân dân Việt Nam;": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        },
+        "Xét đề nghị của FPT;": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "Xét đề nghị của FPT;": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "dangUyRQD2": {
+        "ĐẢNG ỦY TẬP ĐOÀN VIETTEL": {
+            "styleParagraph": "align:center,",
+            "ĐẢNG ỦY TẬP ĐOÀN VIETTEL": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "qd2": {
+        "QUYẾT ĐỊNH": {
+            "styleParagraph": "align:center,",
+            "QUYẾT ĐỊNH": "bold:true,italic:false,color:null,fontSize:15,underline:false"
+        }
+    },
+    "dieu": {
+        "Điều 1. Thành lập Chi bộ GPS trực thuộc Đảng bộ tập đoàn NB trên cơ sở sáp nhập Chi bộ Team A và Chi bộ Team B gồm 6 đảng viên (có danh sách kèm theo).": {
+            "styleParagraph": "align:both,",
+            "Điều ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "1. ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Thành lập ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Chi bộ GPS trực thuộc Đảng bộ tập đoàn NB trên cơ sở sáp nhập Chi bộ Team A và Chi bộ Team B gồm 6 đảng viên ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "(có danh sách kèm theo).": "bold:false,italic:true,color:null,fontSize:14,underline:false"
+        },
+        "Điều 2. Chỉ định Chi ủy và chỉ định các đồng chí có tên sau tham gia Chi ủy GPS, nhiệm kỳ 2020-2022:": {
+            "styleParagraph": "align:both,",
+            "Điều 2. ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Chỉ định Chi ủy và chỉ định các đồng chí có tên sau tham gia ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Chi ủy GPS, nhiệm kỳ 2020-2022:": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        },
+        "1. Đồng chí Đại úy Nguyễn Thành Trung Nguyễn Thành Trung Nguyễn Thành Trung - Trưởng phòng - Bí thư": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "1. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Đại úy ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Nguyễn Thành Trung Nguyễn Thành Trung Nguyễn Thành Trung - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Trưởng phòng - Bí thư": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "2. Đồng chí Trung úy Trần Văn Toàn - Phó phòng - Phó bí thư": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "2. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Trung úy ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Trần Văn Toàn - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Phó phòng - Phó bí thư": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "3. Đồng chí Đại tá Phạm Tiến Hùng - Tổ trưởng - Ủy viên": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "3. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Đại tá ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Phạm Tiến Hùng - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Tổ trưởng - Ủy viên": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "4. Đồng chí Thiếu úy Lê Thị Hương Lê Thị Hương Lê Thị Hương Lê Thị Hương - Nhân viên - Ủy viên": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "4. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Thiếu úy ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Lê Thị Hương Lê Thị Hương Lê Thị Hương Lê Thị Hương - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Nhân viên - Ủy viên": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "5. Đồng chí Đại úy Nguyễn Hương Giang - Nhân viên - Ủy viên": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "5. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Đại úy ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Nguyễn Hương Giang - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Nhân viên - Ủy viên": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "6. Đồng chí Thượng tá Trần Tuấn Hà - Nhân viên - Ủy viên": {
+            "styleParagraph": "align:both,valfirstLine:32.25,",
+            "6. Đồng chí ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Thượng tá ": "bold:false,italic:true,color:null,fontSize:14,underline:false",
+            "Trần Tuấn Hà - ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Nhân viên - Ủy viên": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        },
+        "Điều 3. Chi bộ GPS có trách nhiệm tổ chức sinh hoạt, lãnh đạo thực hiện nghị quyết của đảng các cấp và Điều lệ, các văn bản hiện hành của Đảng Cộng sản Việt Nam.": {
+            "styleParagraph": "align:both,",
+            "Điều 3. ": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            "Chi bộ GPS có trách nhiệm tổ chức sinh hoạt, lãnh đạo thực hiện nghị quyết của đảng các cấp và Điều lệ, các văn bản hiện hành của Đảng Cộng sản Việt Nam.": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        },
+        "Điều 4. FPT, Chi bộ GPS và các đồng chí có tên tại Điều 1,2,3 chịu trách nhiệm thi hành Quyết định này.": {
+            "styleParagraph": "align:both,",
+            "Điều 4.": "bold:true,italic:false,color:null,fontSize:14,underline:false",
+            " FPT, ": "bold:false,italic:false,color:null,fontSize:14,underline:false",
+            "Chi bộ GPS và các đồng chí có tên tại Điều 1,2,3 chịu trách nhiệm thi hành Quyết định này.": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "noiNhan": {
+        "Nơi nhận:": {
+            "styleParagraph": "",
+            "Nơi nhận:": "bold:false,italic:false,color:null,fontSize:14,underline:true"
+        }
+    },
+    "tm": {
+        "T/M ĐẢNG ỦY": {
+            "styleParagraph": "align:center,",
+            "T/M ĐẢNG ỦY": "bold:true,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "nhuDieu": {
+        "Như Điều 4": {
+            "styleParagraph": "",
+            "Như Điều 4": "bold:false,italic:false,color:null,fontSize:12,underline:false"
+        }
+    },
+    "luu": {
+        "Lưu VT, ĐU.": {
+            "styleParagraph": "",
+            "Lưu VT, ĐU.": "bold:false,italic:false,color:null,fontSize:12,underline:false"
+        }
+    },
+    "chucDanh": {
+        "BÍ THƯ": {
+            "styleParagraph": "align:center,",
+            "BÍ THƯ": "bold:false,italic:false,color:null,fontSize:14,underline:false"
+        }
+    },
+    "chuCaiDau": {
+        "T-7": {
+            "styleParagraph": "align:center,",
+            "T-7": "bold:false,italic:false,color:null,fontSize:8,underline:false"
+        }
+    }
+}
