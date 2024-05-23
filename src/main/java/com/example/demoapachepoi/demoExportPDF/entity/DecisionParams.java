@@ -7,10 +7,11 @@ import lombok.Data;
 
 @Entity
 @Data
-public class Decision {
+public class DecisionParams {
 
     @Id
     private Integer id;
-    private String data;
+    private String paramName;
+    private String sqlQuery;
 
 }

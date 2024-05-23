@@ -1,12 +1,14 @@
 package com.example.demoapachepoi.demoExportPDF.controller;
 
+import com.example.demoapachepoi.demoExportPDF.DTO.GenFileDTO;
 import com.example.demoapachepoi.demoExportPDF.service.DecisionService;
 import com.example.demoapachepoi.demoExportPDF.service.ExportDecisionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/export")
@@ -32,6 +34,17 @@ public class ExportController {
     @GetMapping("/export-decision")
     public ResponseEntity exportDecision(){
         return ResponseEntity.ok(exportEntityService.exportStyle());
+    }
+
+    @GetMapping("/export-decision-btv")
+    public ResponseEntity exportDecisionBtv(){
+        return ResponseEntity.ok(exportEntityService.exportStyleBTV());
+    }
+
+    @PostMapping("/gen-file")
+    public ResponseEntity genFile(@RequestBody Map<String, List<GenFileDTO>> stringListMap){
+        exportEntityService.genFileAfterStep2(stringListMap);
+        return ResponseEntity.ok(null);
     }
 
 }

@@ -33,12 +33,12 @@ public class DecisionService {
             "]";
 
     List<PartyMember> partyMembers = Arrays.asList(
-            new PartyMember("Nguyễn Thành Trung Nguyễn Thành Trung Nguyễn Thành Trung", "Đại úy", "Trưởng phòng", "Bí thư")
-            ,new PartyMember("Trần Văn Toàn", "Trung úy", "Phó phòng", "Phó bí thư")
-            ,new PartyMember("Phạm Tiến Hùng", "Đại tá", "Tổ trưởng", "Ủy viên")
-            ,new PartyMember("Lê Thị Hương Lê Thị Hương Lê Thị Hương Lê Thị Hương", "Thiếu úy", "Nhân viên", "Ủy viên")
-            ,new PartyMember("Nguyễn Hương Giang", "Đại úy", "Nhân viên", "Ủy viên")
-            ,new PartyMember("Trần Tuấn Hà", "Thượng tá", "Culi", "Ủy viên")
+            new PartyMember(1, "Nguyễn Thành Trung Nguyễn Thành Trung Nguyễn Thành Trung", "Đại úy", "Trưởng phòng", "Bí thư", "Hà noi")
+            ,new PartyMember(2, "Trần Văn Toàn", "Trung úy", "Phó phòng", "Phó bí thư", "Hà noi")
+            ,new PartyMember(3, "Phạm Tiến Hùng", "Đại tá", "Tổ trưởng", "Ủy viên", "Hà noi")
+            ,new PartyMember(4, "Lê Thị Hương Lê Thị Hương Lê Thị Hương Lê Thị Hương", "Thiếu úy", "Nhân viên", "Ủy viên", "Hà noi")
+            ,new PartyMember(5, "Nguyễn Hương Giang", "Đại úy", "Nhân viên", "Ủy viên", "Hà noi")
+            ,new PartyMember(6, "Trần Tuấn Hà", "Thượng tá", "Culi", "Ủy viên", "Hà noi")
     );
 
 
