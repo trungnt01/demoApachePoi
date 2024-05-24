@@ -7,7 +7,6 @@ import com.example.demoapachepoi.demoExportPDF.utils.GenTextUtil;
 import com.example.demoapachepoi.demoExportPDF.utils.SqlQueryUtil;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.sl.usermodel.TextParagraph;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.XmlCursor;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
@@ -25,6 +24,7 @@ import java.io.StringReader;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -492,6 +492,89 @@ public class ExportDecisionService {
         return styleFromXml;
     }
 
+    public void returnStyleUtil(XWPFParagraph paragraph, XWPFDocument document, Map<String, String> mapNumberingPoint,
+                      StringBuilder text, List<PartyMember> listData, List<StyleParagraphDTO> styleParagraphDTOS
+    ){
+        XWPFRun run, nextRun;
+        List<XWPFRun> runs = paragraph.getRuns();
+        if (runs != null && !runs.isEmpty()) {
+            List<StyleRunDTO> styleRunDTOList = new ArrayList<>();
+            String textParagraph = paragraph.getText();
+
+            // lấy ra style của paragraph
+            String styleFromXml = getStyleFromXml(paragraph);
+
+            //get bullet
+            Map<String, String> bulletPoint = getBulletPoint(paragraph, document, mapNumberingPoint);
+            //add bullet to first of list run
+            styleFromXml = styleBulletPoint(styleFromXml, bulletPoint, styleRunDTOList);
+
+            for (int i = 0; i < runs.size(); i++) {
+                run = runs.get(i);
+                if(run.getText(0) == null){
+                    continue;
+                }
+                text.setLength(0);
+                text.append(run.getText(0));
+                while ((!text.toString().endsWith(" ") && !text.toString().endsWith(".") && !text.toString().endsWith(";")
+                        && !text.toString().endsWith("!") && !text.toString().endsWith(",") && !text.toString().endsWith(":")
+                        && (i < runs.size() - 1 && !runs.get(i + 1).getText(0).startsWith(" -")))
+                        && runs.size() > 1 && i < runs.size() - 1
+                ) {
+                    nextRun = runs.get(i + 1);
+                    text.append(nextRun.getText(0));
+                    i++;
+                }
+                //lấy các thuộc tính của run
+                boolean bold = run.isBold();
+                boolean italic = run.isItalic();
+                boolean strike = run.isStrikeThrough();
+                VerticalAlign subscript = run.getSubscript();
+
+                int fontSize = run.getFontSize();
+                //convert pt to px = pt * 1.3333343412075
+                double fontSizePx = fontSize * convertPtToPx;
+                UnderlinePatterns underline = run.getUnderline();
+
+                StringBuilder styleBuilder = new StringBuilder();
+                styleBuilder.append("bold:").append(bold).append(",")
+                        .append("italic:").append(italic).append(",")
+                        .append("fontSize:").append(String.format("%.3f", fontSizePx)).append("px").append(",")
+                        .append("underline:").append(underline).append(",")
+                        .append("strike:").append(strike).append(",")
+                        .append("subscript:").append(subscript).append(",")
+                ;
+                StyleRunDTO styleRunDTO =  StyleRunDTO.builder()
+                        .title(text.toString())
+                        .styles(styleBuilder.toString())
+                        .build();
+                // check text is read only
+                List<String> readOnlyList = new ArrayList<>();
+                for (PartyMember partyMember : listData) {
+                    if (text.toString().contains(partyMember.getHoTen())) {
+                        if(!readOnlyList.contains(partyMember.getHoTen())){
+                            readOnlyList.add(partyMember.getHoTen());
+                        }
+                    }
+                }
+                styleRunDTO.setReadOnly(readOnlyList);
+                styleRunDTO.setBulletPoint(false);
+                styleRunDTOList.add(styleRunDTO);
+            }
+
+            StyleParagraphDTO styleParagraphDTO = StyleParagraphDTO.builder()
+                    .title(textParagraph)
+                    .styles(styleRunDTOList)
+                    .build();
+            if(styleFromXml != null){
+                styleParagraphDTO.setStyleParagraph(styleFromXml);
+            }
+
+            styleParagraphDTOS.add(styleParagraphDTO);
+        }
+    }
+
+
     // tra ve style cua van ban gen ra
     /**
      *
@@ -501,162 +584,20 @@ public class ExportDecisionService {
      */
     public List<StyleParagraphDTO> returnStyle(XWPFDocument document, List<PartyMember> listData){
         List<StyleParagraphDTO> styleParagraphDTOS = new ArrayList<>();
-        XWPFRun run, nextRun;
-        StringBuilder text = null;
+        StringBuilder text = new StringBuilder();
         // tao 1 map chua cac numbering point, xem stt dang la bao nhieu
         Map<String, String> mapNumberingPoint = new LinkedHashMap<>();
 
         for(IBodyElement iBodyElement : document.getBodyElements()){
             if (iBodyElement instanceof XWPFParagraph) {
                 XWPFParagraph paragraph = (XWPFParagraph) iBodyElement;
-                List<XWPFRun> runs = paragraph.getRuns();
-                if (runs != null && !runs.isEmpty()) {
-                    List<StyleRunDTO> styleRunDTOList = new ArrayList<>();
-                    String textParagraph = paragraph.getText();
-
-                    // lấy ra style của paragraph
-                    String styleFromXml = getStyleFromXml(paragraph);
-
-                    //get bullet
-                    Map<String, String> bulletPoint = getBulletPoint(paragraph, document, mapNumberingPoint);
-                    //add bullet to first of list run
-                    styleFromXml = styleBulletPoint(styleFromXml, bulletPoint, styleRunDTOList);
-
-                    for (int i = 0; i < runs.size(); i++) {
-                        run = runs.get(i);
-                        if(run.getText(0) == null){
-                            continue;
-                        }
-                        text = new StringBuilder(run.getText(0));
-                        while ((!text.toString().endsWith(" ") && !text.toString().endsWith(".") && !text.toString().endsWith(";")
-                                && !text.toString().endsWith("!") && !text.toString().endsWith(",") && !text.toString().endsWith(":")
-                                && (i < runs.size() - 1 && !runs.get(i + 1).getText(0).startsWith(" -")))
-                                && runs.size() > 1 && i < runs.size() - 1
-                        ) {
-                            nextRun = runs.get(i + 1);
-                            text.append(nextRun.getText(0));
-                            i++;
-                        }
-                        //lấy các thuộc tính của run
-                        boolean bold = run.isBold();
-                        boolean italic = run.isItalic();
-                        boolean strike = run.isStrikeThrough();
-                        VerticalAlign subscript = run.getSubscript();
-
-                        int fontSize = run.getFontSize();
-                        //convert pt to px = pt * 1.3333343412075
-                        double fontSizePx = fontSize * convertPtToPx;
-                        UnderlinePatterns underline = run.getUnderline();
-
-                        StringBuilder styleBuilder = new StringBuilder();
-                        styleBuilder.append("bold:").append(bold).append(",")
-                                .append("italic:").append(italic).append(",")
-                                .append("fontSize:").append(String.format("%.3f", fontSizePx)).append("px").append(",")
-                                .append("underline:").append(underline).append(",")
-                                .append("strike:").append(strike).append(",")
-                                .append("subscript:").append(subscript).append(",")
-                        ;
-                        StyleRunDTO styleRunDTO =  StyleRunDTO.builder()
-                                .title(text.toString())
-                                .styles(styleBuilder.toString())
-                                .build();
-                        // check text is read only
-                        List<String> readOnlyList = new ArrayList<>();
-                        for (PartyMember partyMember : listData) {
-                            if (text.toString().contains(partyMember.getHoTen())) {
-                                if(!readOnlyList.contains(partyMember.getHoTen())){
-                                    readOnlyList.add(partyMember.getHoTen());
-                                }
-                            }
-                        }
-                        styleRunDTO.setReadOnly(readOnlyList);
-                        styleRunDTO.setBulletPoint(false);
-                        styleRunDTOList.add(styleRunDTO);
-                    }
-
-                    StyleParagraphDTO styleParagraphDTO = StyleParagraphDTO.builder()
-                            .title(textParagraph)
-                            .styles(styleRunDTOList)
-                            .build();
-                    if(styleFromXml != null){
-                        styleParagraphDTO.setStyleParagraph(styleFromXml);
-                    }
-
-                    styleParagraphDTOS.add(styleParagraphDTO);
-                }
-
+                returnStyleUtil(paragraph, document, mapNumberingPoint, text, listData, styleParagraphDTOS);
             } else if (iBodyElement instanceof XWPFTable) {
                 XWPFTable tbl = (XWPFTable) iBodyElement;
                 for (XWPFTableRow row : tbl.getRows()) {
                     for (XWPFTableCell cell : row.getTableCells()) {
                         for (XWPFParagraph paragraph : cell.getParagraphs()) {
-
-                            String textParagraph = paragraph.getText();
-                            List<StyleRunDTO> styleRunDTOList = new ArrayList<>();
-                            // lấy ra style của paragraph
-                            String styleFromXml = getStyleFromXml(paragraph);
-
-                            //get style bullet
-                            Map<String, String> bulletPoint = getBulletPoint(paragraph, document, mapNumberingPoint);
-                            //add bullet to first of list run
-                            styleFromXml = styleBulletPoint(styleFromXml, bulletPoint, styleRunDTOList);
-
-                            List<XWPFRun> runs = paragraph.getRuns();
-                            if (runs != null && !runs.isEmpty()) {
-                                for (int i = 0; i < runs.size(); i++) {
-                                    run = runs.get(i);
-                                    text = new StringBuilder(run.getText(0));
-                                    while ((!text.toString().endsWith(" ") && !text.toString().endsWith(".") && !text.toString().endsWith(";")
-                                            && !text.toString().endsWith("!") && !text.toString().endsWith(",") && !text.toString().endsWith(":")
-                                            && (i < runs.size() - 1 && !runs.get(i + 1).getText(0).startsWith(" -")))
-                                            && runs.size() > 1 && i < runs.size() - 1
-                                    ) {
-                                        nextRun = runs.get(i + 1);
-                                        text.append(nextRun.getText(0));
-                                        i++;
-                                    }
-                                    //lấy các thuộc tính của run
-                                    boolean bold = run.isBold();
-                                    boolean italic = run.isItalic();
-                                    boolean strike = run.isStrikeThrough();
-                                    VerticalAlign subscript = run.getSubscript();
-
-                                    int fontSize = run.getFontSize();
-                                    //convert pt to px = pt * 1.3333343412075
-                                    double fontSizePx = fontSize * convertPtToPx;
-                                    UnderlinePatterns underline = run.getUnderline();
-
-                                    StringBuilder styleBuilder = new StringBuilder();
-                                    styleBuilder.append("bold:").append(bold).append(",")
-                                            .append("italic:").append(italic).append(",")
-                                            .append("fontSize:").append(String.format("%.3f", fontSizePx)).append(",")
-                                            .append("underline:").append(underline).append(",")
-                                            .append("strike:").append(strike).append(",")
-                                            .append("subscript:").append(subscript).append(",")
-                                    ;
-                                    StyleRunDTO styleRunDTO =  StyleRunDTO.builder()
-                                            .title(text.toString())
-                                            .styles(styleBuilder.toString())
-                                            .build();
-
-                                    // check text is read only
-                                    List<String> readOnlyList = new ArrayList<>();
-                                    for (PartyMember partyMember : listData) {
-                                        if (text.toString().contains(partyMember.getHoTen()) && (!readOnlyList.contains(partyMember.getHoTen()))){
-                                            readOnlyList.add(partyMember.getHoTen());
-                                        }
-                                    }
-                                    styleRunDTOList.add(styleRunDTO);
-                                }
-                                StyleParagraphDTO styleParagraphDTO = StyleParagraphDTO.builder()
-                                        .title(textParagraph)
-                                        .styles(styleRunDTOList)
-                                        .build();
-                                if(styleFromXml != null){
-                                    styleParagraphDTO.setStyleParagraph(styleFromXml);
-                                }
-                                styleParagraphDTOS.add(styleParagraphDTO);
-                            }
+                            returnStyleUtil(paragraph, document, mapNumberingPoint, text, listData, styleParagraphDTOS);
                         }
                     }
                 }
@@ -665,251 +606,20 @@ public class ExportDecisionService {
         return styleParagraphDTOS;
     }
 
-
-    //test
-    public Map<String, List<GenFileDTO>> returnStyleV2(XWPFDocument document){
-        Map<String, List<GenFileDTO>> textGenFile = new LinkedHashMap<>();
-        List<GenFileDTO> genFileDTOS = new ArrayList<>();
-        // tao 1 map chua cac numbering point, xem stt dang la bao nhieu
-        Map<String, String> mapNumberingPoint = new LinkedHashMap<>();
-
-        XWPFRun run, nextRun;
-        StringBuilder text = null;
-        StringBuilder textMultiParagraph = null;
-
-        for(IBodyElement iBodyElement : document.getBodyElements()){
-            if (iBodyElement instanceof XWPFParagraph) {
-                XWPFParagraph paragraph = (XWPFParagraph) iBodyElement;
-                List<XWPFRun> runs = paragraph.getRuns();
-
-                if (runs != null && !runs.isEmpty()) {
-                    GenFileDTO genFileDTO = new GenFileDTO();
-
-                    //set title
-                    String textParagraph = paragraph.getText();
-                    genFileDTO.setTitle(textParagraph);
-
-                    // get style of paragraph
-                    String styleParagraphFromXml = getStyleFromXml(paragraph);
-
-
-                    //set style of paragraph
-                    if(styleParagraphFromXml != null){
-                        genFileDTO.setStyleParagraph(styleParagraphFromXml);
-                    }
-
-                    //get style all run
-                    List<GenFileChildrenDTO> genFileChildrenDTOS = new ArrayList<>();
-                    for (int i = 0; i < runs.size(); i++) {
-                        run = runs.get(i);
-                        if(run.getText(0) == null){
-                            continue;
-                        }
-                        text = new StringBuilder(run.getText(0));
-                        int runIndex = i;
-
-                        if((!checkVariable(text.toString()) && !text.toString().contains("}")) ||
-                            (text.toString().contains("}") && textMultiParagraph != null &&
-                                checkVariable(textMultiParagraph.toString()) && !checkSymmetric(textMultiParagraph.append(text).toString())
-                                && i == runs.size() -1
-                            )
-                        ){
-                            while ((!text.toString().endsWith(" ") && !text.toString().endsWith(".") && !text.toString().endsWith(";")
-                                    && !text.toString().endsWith("!") && !text.toString().endsWith(",") && !text.toString().endsWith(":")
-                                    && (runIndex < runs.size() - 1 && !runs.get(runIndex + 1).getText(0).startsWith(" -"))
-                                    && !runs.get(runIndex + 1).getText(0).startsWith("}") )
-                                    && runs.size() > 1 && runIndex < runs.size() - 1
-                            ) {
-                                nextRun = runs.get(runIndex + 1);
-                                text.append(nextRun.getText(0));
-                                runIndex++;
-                            }
-                            //lấy các thuộc tính của run
-                            boolean bold = run.isBold();
-                            boolean italic = run.isItalic();
-                            String color = run.getColor();
-
-                            int fontSize = run.getFontSize();
-                            //convert pt to px = pt * 1.3333343412075
-                            double fontSizePx = fontSize * convertPtToPx;
-                            UnderlinePatterns underline = run.getUnderline();
-
-                            StringBuilder styleBuilder = new StringBuilder();
-                            styleBuilder.append("bold:").append(bold).append(",")
-                                    .append("italic:").append(italic).append(",")
-                                    .append("color:").append(color).append(",")
-                                    .append("fontSize:").append(String.format("%.3f", fontSizePx)).append(",")
-                                    .append("underline:").append(underline).append(",")
-                            ;
-                            GenFileChildrenDTO genFileChildrenDTO = GenFileChildrenDTO.builder()
-                                    .title(text.toString())
-                                    .styleParagraph(styleBuilder.toString())
-                                    .build();
-                            genFileChildrenDTOS.add(genFileChildrenDTO);
-                        }
-                        i = runIndex;
-                    }
-                    genFileDTO.setChildrens(genFileChildrenDTOS);
-                    genFileDTOS.add(genFileDTO);
-
-                    //check is multi paragraph
-                    for (int i = 0; i < runs.size(); i++) {
-                        run = runs.get(i);
-                        if (run.getText(0) == null) {
-                            continue;
-                        }
-
-                        if(textMultiParagraph != null && !checkSymmetric(textMultiParagraph.toString())){
-                            textMultiParagraph.append("\n").append(run.getText(0));
-                        } else {
-                            textMultiParagraph = new StringBuilder(run.getText(0));
-                        }
-                        if (checkVariable(textMultiParagraph.toString()) || textMultiParagraph.toString().contains("$")) {
-                            int pa = i;
-                            while (pa < runs.size() - 1) {
-                                nextRun = runs.get(pa + 1);
-                                textMultiParagraph.append(nextRun.getText(0) != null ? nextRun.getText(0) : "");
-                                pa++;
-                                if(textMultiParagraph.toString().contains("{") && checkSymmetric(textMultiParagraph.toString())){
-                                    break;
-                                }
-                            }
-                            if(checkSymmetric(textMultiParagraph.toString())){
-                                textGenFile.put(getKey(textMultiParagraph.toString()), genFileDTOS);
-                                genFileDTOS.clear();
-                                break;
-                            }
-                        }
-                    }
-                }
-
-            }
-//            else if (iBodyElement instanceof XWPFTable) {
-//                XWPFTable tbl = (XWPFTable) iBodyElement;
-//                for (XWPFTableRow row : tbl.getRows()) {
-//                    for (XWPFTableCell cell : row.getTableCells()) {
-//                        for (XWPFParagraph paragraph : cell.getParagraphs()) {
-//
-//                            String textParagraph = paragraph.getText();
-//                            Map<String, String> map = new LinkedHashMap<>();
-//                            // lấy ra style của paragraph
-//                            CTPPr ppr = paragraph.getCTP().getPPr();
-//                            String mapStyleFromXml = getStyleFromXml(ppr.toString());
-//                            if(mapStyleFromXml != null){
-//                                map.put("styleParagraph", mapStyleFromXml);
-//                            }
-//                            List<XWPFRun> runs = paragraph.getRuns();
-//                            if (runs != null && !runs.isEmpty()) {
-//                                for (int i = 0; i < runs.size(); i++) {
-//                                    run = runs.get(i);
-//                                    text = new StringBuilder(run.getText(0));
-//                                    while ((!text.toString().endsWith(" ") && !text.toString().endsWith(".") && !text.toString().endsWith(";")
-//                                            && !text.toString().endsWith("!") && !text.toString().endsWith(",") && !text.toString().endsWith(":")
-//                                            && (i < runs.size() - 1 && !runs.get(i + 1).getText(0).startsWith(" -")))
-//                                            && runs.size() > 1 && i < runs.size() - 1
-//                                    ) {
-//                                        nextRun = runs.get(i + 1);
-//                                        text.append(nextRun.getText(0));
-//                                        i++;
-//                                    }
-//                                    //lấy các thuộc tính của run
-//                                    boolean bold = run.isBold();
-//                                    boolean italic = run.isItalic();
-//                                    String color = run.getColor();
-//
-//                                    int fontSize = run.getFontSize();
-//                                    //convert pt to px = pt * 1.3333343412075
-//                                    double fontSizePx = fontSize * convertPtToPx;
-//                                    UnderlinePatterns underline = run.getUnderline();
-//
-//                                    StringBuilder styleBuilder = new StringBuilder();
-//                                    styleBuilder.append("bold:").append(bold).append(",")
-//                                            .append("italic:").append(italic).append(",")
-//                                            .append("color:").append(color).append(",")
-//                                            .append("fontSize:").append(String.format("%.3f", fontSizePx)).append(",")
-//                                            .append("underline:").append(underline).append(",")
-//                                    ;
-//                                    map.put(text.toString(), styleBuilder.toString());
-//                                }
-//                                mapStyle2.put(textParagraph, map);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-        }
-        return textGenFile;
-    }
-
-
     // tra ve text cho step2 tu van ban gen ra
     public Map<String, String> returnText(XWPFDocument document){
         Map<String, String> mapData = new LinkedHashMap<>();
-        XWPFRun run, nextRun;
-        StringBuilder text = null;
-
+        StringBuilder text = new StringBuilder();
         for(IBodyElement iBodyElement : document.getBodyElements()){
             if (iBodyElement instanceof XWPFParagraph) {
                 XWPFParagraph paragraph = (XWPFParagraph) iBodyElement;
-                List<XWPFRun> runs = paragraph.getRuns();
-                if (runs != null) {
-                    for (int i = 0; i < runs.size(); i++) {
-                        run = runs.get(i);
-                        if(run.getText(0) == null){
-                            continue;
-                        }
-                        if(text != null && !checkSymmetric(text.toString())){
-                            text.append("\n").append(run.getText(0));
-                        } else {
-                            text = new StringBuilder(run.getText(0));
-                        }
-                        if (checkVariable(text.toString()) || text.toString().contains("$")) {
-                            while (i < runs.size() - 1) {
-                                nextRun = runs.get(i + 1);
-                                text.append(nextRun.getText(0) != null ? nextRun.getText(0) : "");
-                                i++;
-                                if(text.toString().contains("{") && checkSymmetric(text.toString())){
-                                    break;
-                                }
-                            }
-                            if(!checkSymmetric(text.toString())){
-                                continue;
-                            }
-                            mapData.put(getKey(text.toString()), getValue(text.toString()));
-                        }
-                    }
-                }
-
+                returnTextUtil(paragraph, text, mapData);
             } else if (iBodyElement instanceof XWPFTable) {
                 XWPFTable tbl = (XWPFTable) iBodyElement;
                 for (XWPFTableRow row : tbl.getRows()) {
                     for (XWPFTableCell cell : row.getTableCells()) {
                         for (XWPFParagraph paragraph : cell.getParagraphs()) {
-                            List<XWPFRun> runs = paragraph.getRuns();
-                            if (runs != null) {
-                                for (int i = 0; i < runs.size(); i++) {
-                                    run = runs.get(i);
-                                    if(text != null && !checkSymmetric(text.toString())){
-                                        text.append("\n").append(run.getText(0));
-                                    } else {
-                                        text = new StringBuilder(run.getText(0));
-                                    }
-                                    if (checkVariable(text.toString()) || text.toString().contains("$")) {
-                                        while (i < runs.size() - 1) {
-                                            nextRun = runs.get(i + 1);
-                                            text.append(nextRun.getText(0) != null ? nextRun.getText(0) : "");
-                                            i++;
-                                            if(text.toString().contains("{") && checkSymmetric(text.toString())){
-                                                break;
-                                            }
-                                        }
-                                        if(!checkSymmetric(text.toString())){
-                                            continue;
-                                        }
-                                        mapData.put(getKey(text.toString()), getValue(text.toString()));
-                                    }
-                                }
-                            }
+                            returnTextUtil(paragraph, text, mapData);
                         }
                     }
                 }
@@ -919,104 +629,75 @@ public class ExportDecisionService {
         return mapData;
     }
 
-    //xóa key xác định từng đoạn trong template
-    public void deleteKey(XWPFDocument document){
+    public void deleteParaUtil(StringBuilder text, XWPFParagraph xwpfParagraph, boolean check){
+        List<XWPFRun> newRuns = xwpfParagraph.getRuns();
+        XWPFRun runNew;
+        Integer runDelete = null;
+        Integer run2Delete = null;
+        for (int r = 0; r < newRuns.size(); r++){
+            runNew = newRuns.get(r);
+            runDelete = checkVariableText(text, runNew, runDelete, r);
+            if (text.toString().contains("$") && runNew.getText(0).contains("$")) {
+                runDelete = 0;
+                if(check){
+                    if(runNew.getText(0).contains("$") && (runDelete != null || runDelete == 0)){
+                        runDelete = r;
+                    }
+                }
+                AtomicInteger atomicInteger = new AtomicInteger(r);
+                run2Delete = deleteUtil(atomicInteger, newRuns, xwpfParagraph, text, run2Delete);
+                r = atomicInteger.intValue();
+            }
+        }
+        deleteRunUtil(runDelete, run2Delete, xwpfParagraph);
+    }
+
+    private void returnTextUtil(XWPFParagraph paragraph, StringBuilder text, Map<String, String> mapData){
         XWPFRun run, nextRun;
-        StringBuilder text = null;
-        for (int a = 0; a < document.getParagraphs().size(); a++) {
-            XWPFParagraph paragraph = document.getParagraphs().get(a);
-            List<XWPFRun> runs = paragraph.getRuns();
-            Integer runDelete = null;
-            Integer run2Delete = null;
-            if (runs != null) {
-                for (int i = 0; i < runs.size(); i++) {
-                    run = runs.get(i);
-                    if(text != null && !checkSymmetric(text.toString())){
-                        text.append(run.getText(0));
-                    } else {
-                        text = new StringBuilder(run.getText(0));
-                    }
-                    if(checkVariable(text.toString()) && checkSymmetric(text.toString())){
-                        runDelete = i;
-                    }
-                    if (text.toString().contains("$") && run.getText(0).contains("$")) {
-                        runDelete = 0;
-                        while (i < runs.size() - 1) {
-                            nextRun = runs.get(i + 1);
-                            String oldText = text.toString();
-                            text.append(nextRun.getText(0));
-                            if(!checkVariable(text.toString())){
-                                paragraph.removeRun(i + 1);
-                            } else if(checkVariable(text.toString()) && !checkVariable(oldText)){
-                                paragraph.removeRun(i + 1);
-                            }else {
-                                i++;
-                                if(text.toString().contains("{") && checkSymmetric(text.toString())){
-                                    run2Delete = i;
-                                    break;
-                                }
-                            }
+        List<XWPFRun> runs = paragraph.getRuns();
+        if (runs != null) {
+            for (int i = 0; i < runs.size(); i++) {
+                run = runs.get(i);
+                if(run.getText(0) == null){
+                    continue;
+                }
+                if(text != null && !checkSymmetric(text.toString())){
+                    text.append("\n").append(run.getText(0));
+                } else {
+                    text.setLength(0);
+                    text.append(run.getText(0));
+                }
+                if (checkVariable(text.toString()) || text.toString().contains("$")) {
+                    while (i < runs.size() - 1) {
+                        nextRun = runs.get(i + 1);
+                        text.append(nextRun.getText(0) != null ? nextRun.getText(0) : "");
+                        i++;
+                        if(text.toString().contains("{") && checkSymmetric(text.toString())){
+                            break;
                         }
                     }
-                }
-                if(run2Delete != null){
-                    paragraph.removeRun(run2Delete);
-                    run2Delete = null;
-                }
-                if(runDelete != null){
-                    paragraph.removeRun(runDelete);
-                    runDelete = null;
+                    if(!checkSymmetric(text.toString())){
+                        continue;
+                    }
+                    mapData.put(getKey(text.toString()), getValue(text.toString()));
                 }
             }
+        }
+    }
+
+    //xóa key xác định từng đoạn trong template
+    public void deleteKey(XWPFDocument document){
+        StringBuilder textData = new StringBuilder();
+        for (int a = 0; a < document.getParagraphs().size(); a++) {
+            XWPFParagraph paragraph = document.getParagraphs().get(a);
+            deleteParaUtil(textData, paragraph, false);
         }
 
         for (XWPFTable tbl : document.getTables()) {
             for (XWPFTableRow row : tbl.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
                     for (XWPFParagraph paragraph : cell.getParagraphs()) {
-                        List<XWPFRun> runs = paragraph.getRuns();
-                        Integer runDelete = null;
-                        Integer run2Delete = null;
-                        if (runs != null) {
-                            for (int i = 0; i < runs.size(); i++) {
-                                run = runs.get(i);
-                                if(text != null && !checkSymmetric(text.toString())){
-                                    text.append(run.getText(0));
-                                } else {
-                                    text = new StringBuilder(run.getText(0));
-                                }
-                                if(checkVariable(text.toString()) && checkSymmetric(text.toString())){
-                                    runDelete = i;
-                                }
-                                if (text.toString().contains("$") && run.getText(0).contains("$")) {
-                                    runDelete = 0;
-                                    while (i < runs.size() - 1) {
-                                        nextRun = runs.get(i + 1);
-                                        String oldText = text.toString();
-                                        text.append(nextRun.getText(0));
-                                        if(!checkVariable(text.toString())){
-                                            paragraph.removeRun(i + 1);
-                                        } else if(checkVariable(text.toString()) && !checkVariable(oldText)){
-                                            paragraph.removeRun(i + 1);
-                                        }else {
-                                            i++;
-                                            if(text.toString().contains("{") && checkSymmetric(text.toString())){
-                                                run2Delete = i;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if(run2Delete != null){
-                                paragraph.removeRun(run2Delete);
-                                run2Delete = null;
-                            }
-                            if(runDelete != null){
-                                paragraph.removeRun(runDelete);
-                                runDelete = null;
-                            }
-                        }
+                        deleteParaUtil(textData, paragraph, false);
                     }
                 }
             }
@@ -1026,52 +707,8 @@ public class ExportDecisionService {
 
     //delete key cua từng paragraph đã được xác định
     public void deleteKeyPara(XWPFParagraph xwpfParagraph){
-        List<XWPFRun> newRuns = xwpfParagraph.getRuns();
-        XWPFRun runNew, nextRunNew;
-        StringBuilder textData = null;
-        Integer runDelete = null;
-        Integer run2Delete = null;
-        for (int r = 0; r < newRuns.size(); r++){
-            runNew = newRuns.get(r);
-            if(textData != null && !checkSymmetric(textData.toString())){
-                textData.append(runNew.getText(0));
-            } else {
-                textData = new StringBuilder(runNew.getText(0));
-            }
-            if(checkVariable(textData.toString()) && checkSymmetric(textData.toString())){
-                runDelete = r;
-            }
-            if (textData.toString().contains("$") && runNew.getText(0).contains("$")) {
-                runDelete = 0;
-                if(runNew.getText(0).contains("$") &&  runDelete != null && runDelete == 0){
-                    runDelete = r;
-                }
-                while (r < newRuns.size() - 1) {
-                    nextRunNew = newRuns.get(r + 1);
-                    String oldText = textData.toString();
-                    textData.append(nextRunNew.getText(0));
-                    if(!checkVariable(textData.toString())){
-                        xwpfParagraph.removeRun(r + 1);
-                    } else if(checkVariable(textData.toString()) && !checkVariable(oldText)){
-                        xwpfParagraph.removeRun(r + 1);
-                    }else {
-                        r++;
-                        if(textData.toString().contains("{") && checkSymmetric(textData.toString())){
-                            run2Delete = r;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if(run2Delete != null){
-            xwpfParagraph.removeRun(run2Delete);
-            run2Delete = null;
-        }
-        if(runDelete != null){
-            xwpfParagraph.removeRun(runDelete);
-            runDelete = null;
-        }
+        StringBuilder text = new StringBuilder();
+        deleteParaUtil(text, xwpfParagraph, true);
     }
 
     //xoa bo key danh dau danh sach thanh vien trong to chuc(danh sach long nhau)
@@ -1091,50 +728,56 @@ public class ExportDecisionService {
                 }
             }
         }
+        StringBuilder text = new StringBuilder();
+        deleteParaUtil(text, xwpfParagraphChild, false);
+    }
 
-        List<XWPFRun> newRuns = xwpfParagraphChild.getRuns();
-        XWPFRun runNew, nextRunNew;
-        StringBuilder textData = null;
-        Integer runDelete = null;
-        Integer run2Delete = null;
-        for (int r = 0; r < newRuns.size(); r++){
-            runNew = newRuns.get(r);
-            if(textData != null && !checkSymmetric(textData.toString())){
-                textData.append(runNew.getText(0));
-            } else {
-                textData = new StringBuilder(runNew.getText(0));
-            }
-            if(checkVariable(textData.toString()) && checkSymmetric(textData.toString())){
-                runDelete = r;
-            }
-            if (textData.toString().contains("$") && runNew.getText(0).contains("$")) {
-                runDelete = 0;
-                while (r < newRuns.size() - 1) {
-                    nextRunNew = newRuns.get(r + 1);
-                    String oldText = textData.toString();
-                    textData.append(nextRunNew.getText(0));
-                    if(!checkVariable(textData.toString())){
-                        xwpfParagraphChild.removeRun(r + 1);
-                    } else if(checkVariable(textData.toString()) && !checkVariable(oldText)){
-                        xwpfParagraphChild.removeRun(r + 1);
-                    }else {
-                        r++;
-                        if(textData.toString().contains("{") && checkSymmetric(textData.toString())){
-                            run2Delete = r;
-                            break;
-                        }
-                    }
-                }
-            }
+    private Integer checkVariableText(StringBuilder text, XWPFRun runNew, Integer runDelete, Integer r){
+        if(text != null && !checkSymmetric(text.toString())){
+            text.append(runNew.getText(0));
+        } else {
+            text.setLength(0);
+            text.append(runNew.getText(0));
         }
+        if(checkVariable(text.toString()) && checkSymmetric(text.toString())){
+            runDelete = r;
+        }
+        return runDelete;
+    }
+
+    private void deleteRunUtil(Integer runDelete, Integer run2Delete, XWPFParagraph xwpfParagraph){
         if(run2Delete != null){
-            xwpfParagraphChild.removeRun(run2Delete);
+            xwpfParagraph.removeRun(run2Delete);
             run2Delete = null;
         }
         if(runDelete != null){
-            xwpfParagraphChild.removeRun(runDelete);
+            xwpfParagraph.removeRun(runDelete);
             runDelete = null;
         }
+    }
+
+
+    private Integer deleteUtil(AtomicInteger atomicInteger, List<XWPFRun> newRuns, XWPFParagraph xwpfParagraph, StringBuilder textData, Integer run2Delete){
+        XWPFRun nextRunNew;
+        int r = atomicInteger.intValue();
+        while (r < newRuns.size() - 1) {
+            nextRunNew = newRuns.get(r + 1);
+            String oldText = textData.toString();
+            textData.append(nextRunNew.getText(0));
+            if(!checkVariable(textData.toString())){
+                xwpfParagraph.removeRun(r + 1);
+            } else if(checkVariable(textData.toString()) && !checkVariable(oldText)){
+                xwpfParagraph.removeRun(r + 1);
+            }else {
+                r++;
+                atomicInteger.set(r);
+                if(textData.toString().contains("{") && checkSymmetric(textData.toString())){
+                    run2Delete = r;
+                    break;
+                }
+            }
+        }
+        return run2Delete;
     }
 
 
@@ -1183,130 +826,6 @@ public class ExportDecisionService {
     }
 
 
-    //replace param trong template // su dung cho case van ban co danh sach khong co danh sach con // khong dung nua
-    private void replaceText(XWPFDocument document, String key, String value) throws Exception {
-        XWPFRun run, nextRun;
-        StringBuilder text;
-        for (int p = 0; p < document.getParagraphs().size(); p++) {
-            XWPFParagraph paragraph = document.getParagraphs().get(p);
-            List<XWPFRun> runs = paragraph.getRuns();
-            if (runs != null) {
-                for (int i = 0; i < runs.size(); i++) {
-                    run = runs.get(i);
-                    text = new StringBuilder(run.getText(0));
-                    if (text == null) {
-                        continue;
-                    }
-                    if ((key.contains("List") || key.contains("list")) && text.toString().contains("$")) {
-                        StringBuilder textListData = new StringBuilder(text);
-                        int x = i;
-                        while (x < runs.size() - 1) {
-                            x++;
-                            nextRun = runs.get(x);
-                            textListData.append(nextRun.getText(0));
-                            if(checkSymmetric(textListData.toString()) && textListData.toString().contains("{")){
-                                break;
-                            }
-                        }
-
-                        //check nếu param là danh sách
-                        if(checkSymmetric(textListData.toString()) && (textListData.toString().contains("List") || textListData.toString().contains("list"))){
-                            //check nếu list data ứng với key truyền vào thì mới thực hiện lặp qua data và tạo thêm paragraph mới
-//                            replaceList(document, paragraph, partyMembers);
-//                            p += partyMembers.size();
-                            //remove các run cũ
-                            while (!paragraph.getRuns().isEmpty()){
-                                paragraph.removeRun(0);
-                            }
-                        }
-                    }
-                    // cac case khong phai la danh sach
-                    if(!runs.isEmpty()) {
-                        if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))
-                                && text.toString().concat(runs.get(i + 1).getText(0)) .contains("${")
-                        ) {
-                            while (i < runs.size() - 1 && !text.toString().contains("}") || !checkSymmetric(text.toString())) {
-                                nextRun = runs.get(i + 1);
-                                text.append(nextRun.getText(0));
-                                paragraph.removeRun(i + 1);
-                            }
-                            //doi param thanh text
-                            run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
-                        }
-                    }
-                }
-            }
-        }
-
-        for (XWPFTable tbl : document.getTables()) {
-            for (XWPFTableRow row : tbl.getRows()) {
-                for (XWPFTableCell cell : row.getTableCells()) {
-                    for (XWPFParagraph paragraph : cell.getParagraphs()) {
-                        List<XWPFRun> runs = paragraph.getRuns();
-                        if (runs != null) {
-                            for (int i = 0; i < runs.size(); i++) {
-                                run = runs.get(i);
-                                text = new StringBuilder(run.getText(0));
-                                if (text == null) {
-                                    continue;
-                                }
-                                if (text.toString().contains("${") || (text.toString().contains("$") && runs.get(i + 1).getText(0).substring(0, 1).equals("{"))) {
-                                    while (!text.toString().contains("}") || !checkSymmetric(text.toString())) {
-                                        nextRun = runs.get(i + 1);
-                                        text.append(nextRun.getText(0));
-                                        paragraph.removeRun(i + 1);
-                                    }
-
-                                    //nếu thấy \n thì xuống dòng
-                                    if(value.contains("\n")){
-                                        String [] dataList = value.split("\n");
-                                        if(text.toString().contains(key)){
-                                            for (String data : dataList) {
-                                                run.setText("", 0);
-                                                XWPFRun newRun = paragraph.createRun();
-                                                newRun.setText(data, 0);
-                                                newRun.setFontSize(run.getFontSize());
-                                                newRun.addCarriageReturn();
-                                            }
-                                        }
-                                    } else {
-                                        run.setText(text.toString().contains(key) ? text.toString().replace(key, value) : text.toString(), 0);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    //replace danh sach khong co danh sach con// khong dung nua
-    @SneakyThrows
-    public void replaceList(XWPFDocument document, XWPFParagraph paragraph, List<PartyMember> partyMembers){
-        for (int pm = partyMembers.size() - 1; pm >= 0; pm--){
-            PartyMember partyMember = partyMembers.get(pm);
-            XWPFParagraph xwpfParagraph = insertParaAfterCurrentPara(document, paragraph);
-            List<XWPFRun> newRuns = xwpfParagraph.getRuns();
-            Field[] fields = partyMember.getClass().getDeclaredFields();
-            for (int r = 0; r < newRuns.size(); r++){
-                for (Field field : fields){
-                    String textReplace = newRuns.get(r).getText(0);
-                    if(textReplace.contains("STT")){
-                        String newText = String.valueOf(pm + 1);
-                        newRuns.get(r).setText(textReplace.replace("${STT}", newText), 0);
-                    }
-                    if(textReplace.contains(field.getName())){
-                        field.setAccessible(true);
-                        String newText = field.get(partyMember).toString();
-                        newRuns.get(r).setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
-                    }
-                }
-            }
-            // xóa bỏ phần key đánh dấu danh sách
-//            deleteKeyPara(xwpfParagraph);
-        }
-    }
 
     // replace danh sach khong co danh sach con v2
     @SneakyThrows
@@ -1455,61 +974,7 @@ public class ExportDecisionService {
             //lap qua cac run de replace text
             List<XWPFRun> newRunsParent = parParent.getRuns();
             Field[] fieldsParent = tccdMember.getClass().getDeclaredFields();
-            for (Field field : fieldsParent){
-                StringBuilder textRunChild = null;
-                for (int r = 0; r < newRunsParent.size(); r++){
-                    if(textRunChild != null && !checkSymmetric(textRunChild.toString())){
-                        textRunChild.append(newRunsParent.get(r).getText(0));
-                        if(textRunChild.toString().contains("${") && checkSymmetric(textRunChild.toString())){
-                            newRunsParent.get(r - 1).setText(textRunChild.toString(), 0);
-                            parParent.removeRun(r);
-                            r--;
-                        }
-                    } else {
-                        textRunChild = new StringBuilder(newRunsParent.get(r).getText(0));
-                    }
-
-                    if(r < newRunsParent.size() - 1 && textRunChild.toString().contains("${")
-                            && !checkSymmetric(textRunChild.toString())
-                    ){
-                        String nextRunTextChild = newRunsParent.get(r + 1).getText(0);
-                        textRunChild.append(nextRunTextChild);
-                        newRunsParent.get(r).setText(textRunChild.toString(), 0);
-                        parParent.removeRun(r + 1);
-                        continue;
-                    }
-                    textRunChild = null;
-                    String textReplace = newRunsParent.get(r).getText(0);
-                    if(textReplace.contains("STT")){
-                        String stt = String.valueOf(tc + 1);
-                        newRunsParent.get(r).setText(textReplace.replace("${STT}", stt), 0);
-                    }
-                    if(textReplace.contains(field.getName())){
-                        field.setAccessible(true);
-                        String newText = field.get(tccdMember).toString();
-                        newRunsParent.get(r).setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
-                    }
-                    else {
-                        // lap qua cac param trong db, neu tim thay -> replace = data query tu cau sql
-                        for(DecisionParams decisionParam : decisionParams){
-                            String key = decisionParam.getParamName();
-                            String sqlQuery = decisionParam.getSqlQuery();
-                            if(key.toLowerCase().contains("list")){
-                                continue;
-                            }
-
-                            // todo:add cac tham so dieu kien
-                            Map<String, String> paramList = new LinkedHashMap<>();
-                            paramList.put("id", "1");
-
-                            String value = sqlQueryUtil.getDataBySqlString(sqlQuery, paramList);
-                            if(textReplace.contains(key)){
-                                newRunsParent.get(r).setText(textReplace.replace(key, value), 0);
-                            }
-                        }
-                    }
-                }
-            }
+            replaceNestedListUtil(fieldsParent, newRunsParent, parParent, tc, tccdMember);
 
             // lap qua cac thanh vien trong to chuc con
             for (int pm = tccdMember.getPartyMembers().size() - 1; pm >= 0; pm--){
@@ -1519,65 +984,7 @@ public class ExportDecisionService {
                 XWPFParagraph xwpfParagraph = insertParaListAfterCurrentPara(document, paragraphParentNew, paragraphChildOld);
                 List<XWPFRun> newRuns = xwpfParagraph.getRuns();
                 Field[] fields = partyMember.getClass().getDeclaredFields();
-                for (Field field : fields){
-                    StringBuilder textRunChild = null;
-                    for (int r = 0; r < newRuns.size(); r++){
-                        if(textRunChild != null && !checkSymmetric(textRunChild.toString())){
-                            textRunChild.append(newRuns.get(r).getText(0));
-                            if(textRunChild.toString().contains("${") && checkSymmetric(textRunChild.toString())){
-                                newRuns.get(r - 1).setText(textRunChild.toString(), 0);
-                                xwpfParagraph.removeRun(r);
-                                r--;
-                            } else {
-                                xwpfParagraph.removeRun(r);
-                                r--;
-                                continue;
-                            }
-                        } else {
-                            textRunChild = new StringBuilder(newRuns.get(r).getText(0));
-                        }
-
-                        if(r < newRuns.size() - 1 && textRunChild.toString().contains("${")
-                                && !checkSymmetric(textRunChild.toString())
-                        ){
-                            String nextRunTextChild = newRuns.get(r + 1).getText(0);
-                            textRunChild.append(nextRunTextChild);
-                            newRuns.get(r).setText(textRunChild.toString(), 0);
-                            xwpfParagraph.removeRun(r + 1);
-                            continue;
-                        }
-                        textRunChild = null;
-                        String textReplace = newRuns.get(r).getText(0);
-                        if(textReplace.contains("STT")){
-                            String stt = String.valueOf(pm + 1);
-                            newRuns.get(r).setText(textReplace.replace("${STT}", stt), 0);
-                        }
-                        if(textReplace.contains(field.getName())){
-                            field.setAccessible(true);
-                            String newText = field.get(partyMember).toString();
-                            newRuns.get(r).setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
-                        }
-                        else {
-                            // lap qua cac param trong db, neu tim thay -> replace = data query tu cau sql
-                            for(DecisionParams decisionParam : decisionParams){
-                                String key = decisionParam.getParamName();
-                                String sqlQuery = decisionParam.getSqlQuery();
-                                if(key.toLowerCase().contains("list")){
-                                    continue;
-                                }
-
-                                // todo:add cac tham so dieu kien
-                                Map<String, String> paramList = new LinkedHashMap<>();
-                                paramList.put("id", "1");
-
-                                String value = sqlQueryUtil.getDataBySqlString(sqlQuery, paramList);
-                                if(textReplace.contains(key)){
-                                    newRuns.get(r).setText(textReplace.replace(key, value), 0);
-                                }
-                            }
-                        }
-                    }
-                }
+                replaceNestedListUtil(fields, newRuns, xwpfParagraph, pm, partyMember);
                 // xóa bỏ phần key đánh dấu danh sách thanh vien
                 deleteKeyParaList(parParent, xwpfParagraph);
             }
@@ -1587,7 +994,71 @@ public class ExportDecisionService {
     }
 
 
-//    replace text v2
+    private void replaceNestedListUtil(Field[] fields, List<XWPFRun> newRuns, XWPFParagraph xwpfParagraph, int pm, Object memberObject) throws IllegalAccessException {
+        for (Field field : fields){
+            StringBuilder textRunChild = new StringBuilder();
+            for (int r = 0; r < newRuns.size(); r++){
+                if(textRunChild != null && !checkSymmetric(textRunChild.toString())){
+                    textRunChild.append(newRuns.get(r).getText(0));
+                    if(textRunChild.toString().contains("${") && checkSymmetric(textRunChild.toString())){
+                        newRuns.get(r - 1).setText(textRunChild.toString(), 0);
+                        xwpfParagraph.removeRun(r);
+                        r--;
+                    } else {
+                        xwpfParagraph.removeRun(r);
+                        r--;
+                        continue;
+                    }
+                } else {
+                    textRunChild.setLength(0);
+                    textRunChild.append(newRuns.get(r).getText(0));
+                }
+
+                if(r < newRuns.size() - 1 && textRunChild.toString().contains("${")
+                        && !checkSymmetric(textRunChild.toString())
+                ){
+                    String nextRunTextChild = newRuns.get(r + 1).getText(0);
+                    textRunChild.append(nextRunTextChild);
+                    newRuns.get(r).setText(textRunChild.toString(), 0);
+                    xwpfParagraph.removeRun(r + 1);
+                    continue;
+                }
+                textRunChild = new StringBuilder();
+                String textReplace = newRuns.get(r).getText(0);
+                if(textReplace.contains("STT")){
+                    String stt = String.valueOf(pm + 1);
+                    newRuns.get(r).setText(textReplace.replace("${STT}", stt), 0);
+                }
+                if(textReplace.contains(field.getName())){
+                    field.setAccessible(true);
+                    String newText = field.get(memberObject).toString();
+                    newRuns.get(r).setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
+                }
+//                else {
+//                    // lap qua cac param trong db, neu tim thay -> replace = data query tu cau sql
+//                    for(DecisionParams decisionParam : decisionParams){
+//                        String key = decisionParam.getParamName();
+//                        String sqlQuery = decisionParam.getSqlQuery();
+//                        if(key.toLowerCase().contains("list")){
+//                            continue;
+//                        }
+//
+//                        // todo:add cac tham so dieu kien
+//                        Map<String, String> paramList = new LinkedHashMap<>();
+//                        paramList.put("id", "1");
+//
+//                        String value = sqlQueryUtil.getDataBySqlString(sqlQuery, paramList);
+//                        if(textReplace.contains(key)){
+//                            newRuns.get(r).setText(textReplace.replace(key, value), 0);
+//                        }
+//                    }
+//                }
+            }
+        }
+    }
+
+
+    //    replace text v2
     private void replaceText2(XWPFDocument document, String key, String value, List<PartyMember> partyMembers, List<TccdMember> tccdList) throws Exception {
 
         // lay cac param trong db theo id quyet dinh
