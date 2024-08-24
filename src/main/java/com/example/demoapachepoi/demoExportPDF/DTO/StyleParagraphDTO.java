@@ -15,5 +15,6 @@ import java.util.List;
 public class StyleParagraphDTO {
     private String title;
     private String styleParagraph;
+    private String stylesXML;
     private List<StyleRunDTO> styles;
 }

@@ -504,6 +504,19 @@ public class ExportDecisionService {
             // lấy ra style của paragraph
             String styleFromXml = getStyleFromXml(paragraph);
 
+
+            //get style xml
+            String styleXml = "";
+            String styleId = paragraph.getStyleID();
+            if (styleId != null) {
+                XWPFStyle paragraphStyle = document.getStyles().getStyle(styleId);
+                CTStyle ctStyle = paragraphStyle.getCTStyle();
+                // Lấy XML gốc chứa toàn bộ thông tin style
+                styleXml = ctStyle.toString();
+            }
+            //end get style xml
+
+
             //get bullet
             Map<String, String> bulletPoint = getBulletPoint(paragraph, document, mapNumberingPoint);
             //add bullet to first of list run
@@ -568,6 +581,7 @@ public class ExportDecisionService {
                     .build();
             if(styleFromXml != null){
                 styleParagraphDTO.setStyleParagraph(styleFromXml);
+                styleParagraphDTO.setStylesXML(styleXml);
             }
 
             styleParagraphDTOS.add(styleParagraphDTO);
@@ -822,6 +836,8 @@ public class ExportDecisionService {
         XmlCursor cursor = currentParagraph.getCTP().newCursor();
         cursor.toNextSibling();
         XWPFParagraph newParagraph = document.insertNewParagraph(cursor);
+        currentParagraph.getStyle();
+        newParagraph.setStyle(currentParagraph.getStyle());
         return newParagraph;
     }
 
@@ -829,72 +845,14 @@ public class ExportDecisionService {
 
     // replace danh sach khong co danh sach con v2
     @SneakyThrows
-    public void replaceListV2(XWPFDocument document, XWPFParagraph paragraph, List<PartyMember> partyMembers, List<DecisionParams> decisionParams){
+    public void replaceListV2(XWPFDocument document, XWPFParagraph paragraph, List<PartyMember> partyMembers){
 
         for (int pm = partyMembers.size() - 1; pm >= 0; pm--){
             PartyMember partyMember = partyMembers.get(pm);
             XWPFParagraph xwpfParagraph = insertParaAfterCurrentPara(document, paragraph);
             List<XWPFRun> newRuns = xwpfParagraph.getRuns();
             Field[] fields = partyMember.getClass().getDeclaredFields();
-            for (Field field : fields){
-                StringBuilder textRunChild = null;
-                for (int r = 0; r < newRuns.size(); r++){
-                    XWPFRun runCurrent = newRuns.get(r);
-                    if(textRunChild != null && !checkSymmetric(textRunChild.toString())){
-                        textRunChild.append(runCurrent.getText(0));
-                        if(textRunChild.toString().contains("${") && checkSymmetric(textRunChild.toString())){
-                            newRuns.get(r - 1).setText(textRunChild.toString(), 0);
-                            xwpfParagraph.removeRun(r);
-                            r--;
-                        } else {
-                            xwpfParagraph.removeRun(r);
-                            r--;
-                            continue;
-                        }
-                    } else {
-                        textRunChild = new StringBuilder(runCurrent.getText(0));
-                    }
-
-                    if(r < newRuns.size() - 1 && textRunChild.toString().contains("${")
-                            && !checkSymmetric(textRunChild.toString())
-                    ){
-                        String nextRunTextChild = newRuns.get(r + 1).getText(0);
-                        textRunChild.append(nextRunTextChild);
-                        runCurrent.setText(textRunChild.toString(), 0);
-                        xwpfParagraph.removeRun(r + 1);
-                        continue;
-                    }
-                    textRunChild = null;
-                    String textReplace = runCurrent.getText(0);
-                    if(textReplace.contains("STT")){
-                        String stt = String.valueOf(pm + 1);
-                        runCurrent.setText(textReplace.replace("${STT}", stt), 0);
-                    }
-                    if(textReplace.contains(field.getName())){
-                        field.setAccessible(true);
-                        String newText = field.get(partyMember).toString();
-                        runCurrent.setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
-                    } else {
-                        // lap qua cac param trong db, neu tim thay -> replace = data query tu cau sql
-                        for(DecisionParams decisionParam : decisionParams){
-                            String key = decisionParam.getParamName();
-                            String sqlQuery = decisionParam.getSqlQuery();
-                            if(key.toLowerCase().contains("list")){
-                                continue;
-                            }
-
-                            // todo:add cac tham so dieu kien
-                            Map<String, String> paramList = new LinkedHashMap<>();
-                            paramList.put("id", "1");
-
-                            String value = sqlQueryUtil.getDataBySqlString(sqlQuery, paramList);
-                            if(textReplace.contains(key)){
-                                runCurrent.setText(textReplace.replace(key, value), 0);
-                            }
-                        }
-                    }
-                }
-            }
+            replaceNestedListUtil(fields, newRuns, xwpfParagraph, pm, partyMember);
             // xóa bỏ phần key đánh dấu danh sách
             deleteKeyPara(xwpfParagraph);
         }
@@ -962,7 +920,7 @@ public class ExportDecisionService {
     //replace danh sach lồng nhau
     @SneakyThrows
     public void replaceNestedList(XWPFDocument document, XWPFParagraph paragraphParentOld, XWPFParagraph paragraphChildOld,
-                                  List<TccdMember> tccdList, List<DecisionParams> decisionParams
+                                  List<TccdMember> tccdList
     ){
         XWPFParagraph paragraphParentNew = null;
         for (int tc = tccdList.size() - 1; tc >= 0; tc--){
@@ -1034,25 +992,6 @@ public class ExportDecisionService {
                     String newText = field.get(memberObject).toString();
                     newRuns.get(r).setText(textReplace.replace("${" + field.getName() + "}", newText), 0);
                 }
-//                else {
-//                    // lap qua cac param trong db, neu tim thay -> replace = data query tu cau sql
-//                    for(DecisionParams decisionParam : decisionParams){
-//                        String key = decisionParam.getParamName();
-//                        String sqlQuery = decisionParam.getSqlQuery();
-//                        if(key.toLowerCase().contains("list")){
-//                            continue;
-//                        }
-//
-//                        // todo:add cac tham so dieu kien
-//                        Map<String, String> paramList = new LinkedHashMap<>();
-//                        paramList.put("id", "1");
-//
-//                        String value = sqlQueryUtil.getDataBySqlString(sqlQuery, paramList);
-//                        if(textReplace.contains(key)){
-//                            newRuns.get(r).setText(textReplace.replace(key, value), 0);
-//                        }
-//                    }
-//                }
             }
         }
     }
@@ -1109,7 +1048,7 @@ public class ExportDecisionService {
                             // case danh sach khong long nhau
                             if(checkSymmetric(text.toString()) && !appendData){
                                 if(partyMembers != null && !partyMembers.isEmpty()){
-                                    replaceListV2(document, paragraph, partyMembers, decisionParams);
+                                    replaceListV2(document, paragraph, partyMembers);
                                     p += partyMembers.size();
                                     //remove các run cũ
                                     while (!paragraph.getRuns().isEmpty()){
@@ -1139,7 +1078,7 @@ public class ExportDecisionService {
                                         XWPFParagraph paragraphChildOld = document.getParagraphs().get(posOfParaChild - 1);
 
                                         //check nếu list data ứng với key truyền vào thì mới thực hiện lặp qua data và tạo thêm paragraph mới
-                                        replaceNestedList(document, paragraphParentOld, paragraphChildOld, tccdList, decisionParams);
+                                        replaceNestedList(document, paragraphParentOld, paragraphChildOld, tccdList);
                                         p += tccdList.size();
 
                                         //remove các run cũ cua para to chuc con va para cac thanh vien
@@ -1528,11 +1467,36 @@ public class ExportDecisionService {
         });
     }
 
+    private void genFileV2Util(StringBuilder text, List<XWPFRun> runs, AtomicInteger atomicInteger){
+        int i = atomicInteger.intValue();
+        XWPFRun nextRun;
+        XWPFRun run = runs.get(i);
+        if(text != null && !checkSymmetric(text.toString())){
+            text.append(run.getText(0));
+        } else {
+            text = new StringBuilder(run.getText(0));
+        }
+
+        if(!runs.isEmpty()) {
+            if(text.toString().contains("$")){
+                while (!checkVariable(text.toString()) || !checkSymmetric(text.toString())){
+                    if(i == runs.size() - 1){
+                        break;
+                    }
+                    nextRun = runs.get(i + 1);
+                    text.append(nextRun.getText(0));
+                    i++;
+                }
+            }
+        }
+        atomicInteger.set(i);
+    }
+
     //gen lại file sau khi sửa ở bước 2 v2
     public void genFileV2(Map<String, List<GenFileDTO>> stringListMap, XWPFDocument document){
         stringListMap.forEach((key, genFileDTOS) -> {
             XWPFRun run, nextRun;
-            StringBuilder text = null;
+            StringBuilder text = new StringBuilder();
             for(int el = 0; el < document.getBodyElements().size(); el++){
                 IBodyElement iBodyElement = document.getBodyElements().get(el);
                 if(iBodyElement instanceof XWPFParagraph){
@@ -1542,6 +1506,10 @@ public class ExportDecisionService {
                         for (int i = 0; i < runs.size(); i++) {
                             run = runs.get(i);
                             if(run == null || StringUtils.isEmpty(run.getText(0))) continue;
+//                            AtomicInteger atomicInteger = new AtomicInteger(i);
+//                            genFileV2Util(text, runs, atomicInteger);
+//                            i = atomicInteger.intValue();
+
                             if(text != null && !checkSymmetric(text.toString())){
                                 text.append(run.getText(0));
                             } else {
